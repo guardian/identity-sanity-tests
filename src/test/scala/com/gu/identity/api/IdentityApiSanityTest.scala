@@ -8,7 +8,7 @@ import org.scalatest.Matchers
 import org.slf4j.LoggerFactory
 
 /**
- * Sanity test of public Identity API on CODE
+ * Sanity tests of public Identity API
  */
 class IdentityApiSanityTest extends FlatSpec with Matchers {
 
