@@ -24,27 +24,25 @@ object TargetHost {
    *
    * @return Identity API host
    */
-  def idApiHost(): Try[String] =
+  def idApiHost(): String =
     readIdApiHostFromEnvVar orElse readIdApiHostFromConfigFile match {
-      case Failure(e) => Failure(TargetHostException(
-        "Target host not set. Specify target host either " +
-          "in environmental variable or application.conf"))
-      case Success(targetHost) => Success(targetHost)
+      case Failure(e) =>
+        logger.error("Target host not set. Specify target host either " +
+          "in environmental variable or application.conf")
+        sys.exit(1)
+      case Success(targetHost) => targetHost
     }
-
 
   /* Reads IDENTITY_API_HOST environmental variable */
   private[this] def readIdApiHostFromEnvVar(): Try[String] = {
     sys.env.get("IDENTITY_API_HOST") match {
-      case Some(v) => {
+      case Some(v) =>
         logger.info("Target host = " + v)
         logger.info("Target host specified using environmental variable. ")
         Success(v)
-      }
-      case None => {
+      case None =>
         Failure(TargetHostException(
           "Environmental variable IDENTITY_API_HOST not set."))
-      }
     }
   }
 
@@ -53,15 +51,13 @@ object TargetHost {
     val conf = ConfigFactory.load()
 
     Try(conf.getString("identity.api.host")) match {
-      case Success(v) => {
+      case Success(v) =>
         logger.info("Target host = " + v)
         logger.info("Target host specified using application.conf. ")
         Success(v)
-      }
-      case Failure(e) => {
+      case Failure(e) =>
         Failure(TargetHostException(
           "Property identity.api.host not set in application.conf."))
-      }
     }
   }
 

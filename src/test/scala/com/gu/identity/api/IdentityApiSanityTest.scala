@@ -5,8 +5,6 @@ import com.gu.util.Http
 
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
-import scala.util.Success
-import scala.util.Failure
 import org.slf4j.LoggerFactory
 
 /**
@@ -16,13 +14,7 @@ class IdentityApiSanityTest extends FlatSpec with Matchers {
 
   private[this] val logger = LoggerFactory.getLogger(this.getClass)
 
-  private[this] val idApiHost = TargetHost.idApiHost() match {
-    case Success(domain) => domain
-    case Failure(e) => {
-      logger.error(e.getMessage)
-      sys.exit(1)
-    }
-  }
+  private[this] val idApiHost = TargetHost.idApiHost()
 
   behavior of "Public Identity API on CODE"
 
