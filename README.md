@@ -2,16 +2,19 @@
 
 Sanity tests of Identity API REST endpoints. 
 
-Tests can be targeted at different stages (LOCAL, CODE, PROD) using either:
+Tests execute against Web and Mobile Apps hosts in different stages (CODE, PROD). 
+Stage targeting is done via an environmental variable:
 
-* environmental variable `IDENTITY_API_HOST`
-* property `identity.api.host` in `application.conf`
+```
+ID_API_TARGET_STAGE := CODE | PROD
+```
+Domain names of targets are set in `application.conf`
 
-The environmental variable has priority over the config file.
+List of targets:
 
-To target the tests in TeamCity use the environmental variable. 
-
-Host Environment | Domain
----------------- | --------------------------------------
-CODE             | https://idapi.code.dev-theguardian.com
-PROD             | https://idapi.theguardian.com
+Consumer | Stage | Domain
+---------|-------|--------------------------------------
+Web      | CODE  | https://idapi.code.dev-theguardian.com
+Web      | PROD  | https://idapi.theguardian.com
+Mobile   | CODE  | https://id.code.dev-guardianapis.com
+Mobile   | PROD  | https://id.guardianapis.com
