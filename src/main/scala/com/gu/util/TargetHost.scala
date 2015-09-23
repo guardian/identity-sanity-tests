@@ -2,15 +2,12 @@ package com.gu.util
 
 import com.typesafe.config.ConfigFactory
 import org.slf4j.LoggerFactory
-import scala.util.Try
-import scala.util.Success
-import scala.util.Failure
+import scala.util.{Try, Success, Failure}
 
 object TargetHost {
-
   private[this] val logger = LoggerFactory.getLogger(this.getClass)
 
-  case class TargetHostException(msg: String) extends Exception(msg: String)
+  class TargetHostException(msg: String) extends Exception(msg: String)
 
   /**
    * Reads from configuration file or environmental variable the Identity API
@@ -23,13 +20,16 @@ object TargetHost {
    * TeamCity uses IDENTITY_API_HOST to target the tests.
    *
    * @return Identity API host
+   * @throws TargetHostException if the host is not specified in config file nor
+   *                             as an environment variable
    */
   def idApiHost(): String =
     readIdApiHostFromEnvVar orElse readIdApiHostFromConfigFile match {
       case Failure(e) =>
-        logger.error("Target host not set. Specify target host either " +
-          "in environmental variable or application.conf")
-        sys.exit(1)
+        val errMsg = "Target host not set. Specify target host either " +
+          "in environmental variable or application.conf"
+        logger.error(errMsg)
+        throw new TargetHostException(errMsg)
       case Success(targetHost) => targetHost
     }
 
@@ -41,7 +41,7 @@ object TargetHost {
         logger.info("Target host specified using environmental variable. ")
         Success(v)
       case None =>
-        Failure(TargetHostException(
+        Failure(new TargetHostException(
           "Environmental variable IDENTITY_API_HOST not set."))
     }
   }
@@ -56,9 +56,8 @@ object TargetHost {
         logger.info("Target host specified using application.conf. ")
         Success(v)
       case Failure(e) =>
-        Failure(TargetHostException(
+        Failure(new TargetHostException(
           "Property identity.api.host not set in application.conf."))
     }
   }
-
 }

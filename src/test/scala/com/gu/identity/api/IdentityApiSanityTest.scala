@@ -3,8 +3,7 @@ package com.gu.identity.api
 import com.gu.util.TargetHost
 import com.gu.util.Http
 
-import org.scalatest.FlatSpec
-import org.scalatest.Matchers
+import org.scalatest.{FlatSpec, Matchers}
 import org.slf4j.LoggerFactory
 
 /**
