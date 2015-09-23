@@ -4,60 +4,98 @@ import com.typesafe.config.ConfigFactory
 import org.slf4j.LoggerFactory
 import scala.util.{Try, Success, Failure}
 
+/**
+ * Utility class for determining the target host against which the tests should
+ * run.
+ *
+ * The hosts is determined using
+ *   - environmental variable to specify either PROD or CODE stage
+ *   - application.conf file to provide domains for each stage and each API consumer
+ *
+ * We differentiate between the following consumer of the API because they use different
+ * domains:
+ *   - Web apps (Frontend, Subscription, Membership)
+ *   - Mobile apps
+ */
 object TargetHost {
-  private[this] val logger = LoggerFactory.getLogger(this.getClass)
-
-  class TargetHostException(msg: String) extends Exception(msg: String)
 
   /**
-   * Reads from configuration file or environmental variable the Identity API
-   * host against which the tests should run. The host can be in LOCAL, CODE or
-   * PROD.
+   * Returns Identity API host intended for Web Apps consumers such as Frontend, Membership,
+   * and Subscription.
    *
-   * Environmental variable IDENTITY_API_HOST has priority over
-   * identity.api.host property in application.conf file.
-   *
-   * TeamCity uses IDENTITY_API_HOST to target the tests.
-   *
-   * @return Identity API host
-   * @throws TargetHostException if the host is not specified in config file nor
-   *                             as an environment variable
+   * @return Identity API host for Web consumers
+   * @throws TargetHostException if the host is not specified
    */
-  def idApiHost(): String =
-    readIdApiHostFromEnvVar orElse readIdApiHostFromConfigFile match {
-      case Failure(e) =>
-        val errMsg = "Target host not set. Specify target host either " +
-          "in environmental variable or application.conf"
-        logger.error(errMsg)
-        throw new TargetHostException(errMsg)
-      case Success(targetHost) => targetHost
-    }
+  def webIdApiHost(): String = {
+    logger.info("Determining Identity API host for Web consumers...")
+    idApiHostImpl("identity.api.web.")
+  }
 
-  /* Reads IDENTITY_API_HOST environmental variable */
-  private[this] def readIdApiHostFromEnvVar(): Try[String] = {
-    sys.env.get("IDENTITY_API_HOST") match {
+  /**
+   * Returns Identity API host intended for Mobile Apps consumer.
+   *
+   * @return Identity API host for Mobile Apps consumer
+   * @throws TargetHostException if the host is not specified
+   */
+  def mobileIdApiHost(): String = {
+    logger.info("Determining Identity API host for Mobile consumers...")
+    idApiHostImpl("identity.api.mobile.")
+  }
+
+  /**
+   * Target host could not be determined.
+   */
+  class TargetHostException(msg: String) extends Exception(msg: String)
+
+  private[this] val logger = LoggerFactory.getLogger(this.getClass)
+
+  private[this] val conf = ConfigFactory.load()
+
+  /* The name of the environmental variable specifying the target stage */
+  private[this] val stageEnvVarName = "ID_API_TARGET_STAGE"
+
+  /* Reads target stage (CODE, PROD) from environmental variable stageEnvVarName. */
+  private[this] def readTargetStageFromEnvVar(): Try[String] = {
+
+    sys.env.get(stageEnvVarName) match {
       case Some(v) =>
-        logger.info("Target host = " + v)
-        logger.info("Target host specified using environmental variable. ")
-        Success(v)
+        logger.info("Target stage: " + v)
+        if ((v == "PROD") || (v == "CODE"))
+        {
+          Success(v)
+        }
+        else
+        {
+          val errMsg = "Environmental variable " + stageEnvVarName +
+            " has wrong value. It should be either CODE or PROD."
+          logger.error(errMsg)
+          Failure(new TargetHostException(errMsg))
+        }
       case None =>
         Failure(new TargetHostException(
-          "Environmental variable IDENTITY_API_HOST not set."))
+          "Environmental variable " + stageEnvVarName + " not set."))
     }
   }
 
-  /* Reads identity.api.host property from application.conf */
-  private[this] def readIdApiHostFromConfigFile(): Try[String] = {
-    val conf = ConfigFactory.load()
-
-    Try(conf.getString("identity.api.host")) match {
+  /* Read a property from the config file */
+  private[this] def readPropertyFromConfigFile(property: String) : String = {
+    Try(conf.getString(property)) match {
       case Success(v) =>
-        logger.info("Target host = " + v)
-        logger.info("Target host specified using application.conf. ")
-        Success(v)
+        v
       case Failure(e) =>
-        Failure(new TargetHostException(
-          "Property identity.api.host not set in application.conf."))
+        throw new TargetHostException(property + " not set in application.conf.")
     }
+  }
+
+  /* Helper method to avoid code duplication */
+  private[this] def idApiHostImpl(hostPropertyPrefix: String): String = {
+    val stage = readTargetStageFromEnvVar() match {
+      case Success(v) => v
+      case Failure(e) => throw e
+    }
+
+    val host = readPropertyFromConfigFile(hostPropertyPrefix + stage.toLowerCase)
+    logger.info("Target host: " + host)
+    host
   }
 }
